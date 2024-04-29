@@ -13,7 +13,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+// qmk compile --keyboard gmmk/pro/ansi --keymap default
 #include QMK_KEYBOARD_H
 
 // clang-format off
@@ -63,6 +63,44 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [0] = { ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
-    [1] = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS) }
+    [1] = { ENCODER_CCW_CW(KC_MPRV, KC_MNXT) }
 };
 #endif
+
+static uint16_t caps_key_timer;
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  switch (keycode) {
+    case KC_CAPS: // If caps is pressed start timer
+      caps_key_timer = timer_read();
+      return true;
+      break;
+  }
+  return true;
+}
+
+/**
+ * Called after RBG effect render.
+ */
+bool rgb_matrix_indicators_user() {
+    // If caps lock is on , blink caps lock LED
+    if (host_keyboard_led_state().caps_lock) {
+        if ((timer_elapsed(caps_key_timer) / 100) % 2 == 0) {
+            rgb_matrix_set_color(3, RGB_WHITE);
+            return true;
+        } else {
+            rgb_matrix_set_color(3, RGB_BLACK);
+            rgb_matrix_set_color(4, RGB_BLACK);
+            return true;
+        }
+    }
+
+    // If function key is prssed , change all lights to red
+    switch(biton32(layer_state)) {
+      case 1:
+        rgb_matrix_set_color(55, RGB_RED);
+        return true;
+      break;
+    }
+    return false;
+}
