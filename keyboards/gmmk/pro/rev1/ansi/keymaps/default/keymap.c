@@ -13,7 +13,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+// qmk compile --keyboard gmmk/pro/ansi --keymap default
+// fn + \ to flash
 #include QMK_KEYBOARD_H
 
 // clang-format off
@@ -63,6 +64,48 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [0] = { ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
-    [1] = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS) }
+    [1] = { ENCODER_CCW_CW(KC_MPRV, KC_MNXT) }
 };
 #endif
+
+static uint16_t caps_key_timer;
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  switch (keycode) {
+    case KC_CAPS: // If caps is pressed start timer
+      caps_key_timer = timer_read();
+      return true;
+      break;
+  }
+  return true;
+}
+
+/**
+ * Called after RBG effect render.
+ */
+bool rgb_matrix_indicators_user() {
+    // If caps lock is on , blink caps lock LED
+    if (host_keyboard_led_state().caps_lock) {
+        if ((g_rgb_timer / 100) % 2 == 0) {
+            rgb_matrix_set_color(3, RGB_BLACK);
+            return true;
+        }
+    }
+        if (get_highest_layer(layer_state) > 0) {
+        uint8_t layer = get_highest_layer(layer_state);
+
+        for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
+            for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
+                uint8_t index = g_led_config.matrix_co[row][col];
+
+                if ( index != NO_LED &&
+                keymap_key_to_keycode(layer, (keypos_t){col,row}) > KC_TRNS) {
+                    rgb_matrix_set_color(index, RGB_RED);
+                } else {
+                    rgb_matrix_set_color(index, RGB_BLACK);
+                }
+            }
+        }
+    }
+    return false;
+}
